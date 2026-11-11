@@ -3,15 +3,28 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createBookingSchema } from "@/lib/validators";
-import { timeStringToMinutes, minutesToTimeString } from "@/lib/slots";
+import { timeStringToMinutes, minutesToTimeString, autoReleaseExpiredBridalHolds } from "@/lib/slots";
 import { calculatePriceBreakdown } from "@/lib/pricing";
 import { sendNotification, buildAppointmentConfirmedMessage } from "@/lib/notifications";
+import { checkRateLimit, getClientIp, validateAntiBot } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
+    const ip = getClientIp(req);
+
+    // 1. Sliding-window rate limit (10 booking attempts per 5 minutes per IP)
+    const rateCheck = await checkRateLimit(`ip:${ip}:create_booking`, 10, 300);
+    if (!rateCheck.success) {
+      return NextResponse.json(
+        { error: "Too many booking attempts. Please wait a few minutes before trying again." },
+        { status: 429 }
+      );
+    }
+
     const session = await getServerSession(authOptions);
     const body = await req.json();
 
+    // 2. Validate input schema
     const result = createBookingSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
@@ -27,7 +40,7 @@ export async function POST(req: Request) {
       stylistId,
       date,
       startTime,
-      items,
+      items: rawItems,
       isBridal,
       isHomeVisit,
       venueAddress,
@@ -39,20 +52,102 @@ export async function POST(req: Request) {
       loyaltyPointsToRedeem,
       payDepositOnly,
       paymentMethod,
+      utrNumber,
+      screenshotUrl,
+      hp_website,
+      formTimestamp,
     } = result.data;
+
+    // 3. Anti-Bot honeypot & submission velocity check
+    const botCheck = validateAntiBot({ hp_website, formTimestamp, minDurationSeconds: 1.5 });
+    if (botCheck.isBot) {
+      // Reject bot silently or return 400
+      return NextResponse.json(
+        { error: "Booking submission failed automated security verification." },
+        { status: 400 }
+      );
+    }
+
+    // 4. Check UTR uniqueness before transaction
+    if (utrNumber && utrNumber.trim().length > 0) {
+      const existingPayment = await db.payment.findUnique({
+        where: { utrNumber: utrNumber.trim() },
+      });
+      if (existingPayment) {
+        return NextResponse.json(
+          {
+            error: "Duplicate UTR Number",
+            message: "This UPI Reference (UTR) has already been submitted for another booking. Please check your bank transaction or contact salon support.",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 5. Authoritative Server-Side Item and Price Verification (Never trust client prices!)
+    const validatedItems: {
+      serviceId?: string | null;
+      bridalPackageId?: string | null;
+      mehendiDesignId?: string | null;
+      name: string;
+      price: number;
+      durationMinutes: number;
+    }[] = [];
+
+    let bridalDepositRequired = 0;
+
+    for (const it of rawItems) {
+      if (it.bridalPackageId) {
+        const pkg = await db.bridalPackage.findUnique({ where: { id: it.bridalPackageId } });
+        if (!pkg) {
+          return NextResponse.json({ error: `Selected bridal package not found: ${it.name}` }, { status: 400 });
+        }
+        validatedItems.push({
+          bridalPackageId: pkg.id,
+          name: pkg.name,
+          price: pkg.price,
+          durationMinutes: Math.round(pkg.durationHours * 60),
+        });
+        bridalDepositRequired = pkg.advanceDeposit;
+      } else if (it.mehendiDesignId) {
+        const des = await db.mehendiDesign.findUnique({ where: { id: it.mehendiDesignId } });
+        if (!des) {
+          return NextResponse.json({ error: `Selected mehendi design not found: ${it.name}` }, { status: 400 });
+        }
+        validatedItems.push({
+          mehendiDesignId: des.id,
+          name: des.title,
+          price: des.price,
+          durationMinutes: 60,
+        });
+      } else if (it.serviceId) {
+        const svc = await db.service.findUnique({ where: { id: it.serviceId } });
+        if (!svc || !svc.isActive) {
+          return NextResponse.json({ error: `Selected service not available: ${it.name}` }, { status: 400 });
+        }
+        validatedItems.push({
+          serviceId: svc.id,
+          name: svc.name,
+          price: svc.price,
+          durationMinutes: svc.durationMinutes,
+        });
+      } else {
+        return NextResponse.json({ error: "Invalid treatment selection." }, { status: 400 });
+      }
+    }
 
     const appointmentDate = new Date(`${date}T00:00:00.000Z`);
 
-    // 1. Calculate duration and end time
-    const totalDurationMinutes = items.reduce((acc, curr) => acc + curr.durationMinutes, 0);
+    // 6. Calculate total duration and end time
+    const totalDurationMinutes = validatedItems.reduce((acc, curr) => acc + curr.durationMinutes, 0);
     const startMinutes = timeStringToMinutes(startTime);
     const endMinutes = startMinutes + totalDurationMinutes;
     const endTime = minutesToTimeString(endMinutes);
 
-    // 2. Base Amount
-    const baseAmount = items.reduce((acc, curr) => acc + curr.price, 0);
+    // 7. Base Amount from authoritative DB items
+    const baseAmount = validatedItems.reduce((acc, curr) => acc + curr.price, 0);
 
-    // 3. Check Promo Code
+    // 8. Check Promo Code
     let promoRecord = null;
     if (promoCode) {
       promoRecord = await db.promoCode.findUnique({
@@ -63,7 +158,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 4. Check user membership & loyalty points
+    // 9. Check user membership & loyalty points
     let membershipDiscountPercent = 0;
     let availableLoyaltyPoints = 0;
     const loggedInUserId = (session?.user as any)?.id || null;
@@ -87,17 +182,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // Check bridal deposit if applicable
-    let bridalDepositRequired = 0;
-    if (isBridal) {
-      const bridalItem = items.find((i) => i.bridalPackageId);
-      if (bridalItem?.bridalPackageId) {
-        const pkg = await db.bridalPackage.findUnique({ where: { id: bridalItem.bridalPackageId } });
-        if (pkg) bridalDepositRequired = pkg.advanceDeposit;
-      }
-    }
-
-    // Price calculation
+    // 10. Compute authoritative price breakdown
     const breakdown = calculatePriceBreakdown({
       baseAmount,
       promoCode: promoRecord,
@@ -112,22 +197,50 @@ export async function POST(req: Request) {
 
     const amountPaid = payDepositOnly ? breakdown.depositAmount : breakdown.finalTotal;
     const balanceDue = Math.max(0, breakdown.finalTotal - amountPaid);
-    const paymentStatus = balanceDue === 0 ? "COMPLETED" : amountPaid > 0 ? "PARTIAL" : "PENDING";
 
-    // 5. Execute in database transaction to prevent double bookings
+    // Determine booking and payment status
+    let initialAppointmentStatus = "CONFIRMED";
+    let paymentRecordStatus = "PENDING";
+
+    if (paymentMethod === "UPI") {
+      if (utrNumber && utrNumber.trim().length > 0) {
+        initialAppointmentStatus = "PAYMENT_SUBMITTED";
+        paymentRecordStatus = "SUBMITTED";
+      } else {
+        initialAppointmentStatus = "PENDING_PAYMENT";
+        paymentRecordStatus = "PENDING";
+      }
+    } else {
+      // SALON payment
+      if (isBridal) {
+        initialAppointmentStatus = "PENDING_PAYMENT";
+      } else {
+        initialAppointmentStatus = "CONFIRMED";
+      }
+      paymentRecordStatus = "PENDING";
+    }
+
+    // Tentative 24-hour hold for bridal appointments
+    const holdExpiresAt = isBridal ? new Date(Date.now() + 24 * 60 * 60 * 1000) : null;
+
+    // 11. Database Transaction with slot conflict verification
     const createdAppointment = await db.$transaction(async (tx) => {
+      // Auto-release expired bridal holds inside transaction
+      await autoReleaseExpiredBridalHolds(tx);
+
       // Determine assigned stylist
       let assignedStylistId = stylistId;
+      const blockingStatuses = ["PENDING", "PENDING_PAYMENT", "PAYMENT_SUBMITTED", "CONFIRMED"];
 
       if (!assignedStylistId || assignedStylistId === "any") {
-        // Find an active stylist who has no conflicting appointment
+        // Find an active stylist with no conflicting appointment
         const activeStylists = await tx.stylist.findMany({
           where: { isActive: true },
           include: {
             appointments: {
               where: {
                 date: appointmentDate,
-                status: { in: ["PENDING", "CONFIRMED"] },
+                status: { in: blockingStatuses },
               },
             },
           },
@@ -151,7 +264,7 @@ export async function POST(req: Request) {
           where: {
             stylistId: assignedStylistId,
             date: appointmentDate,
-            status: { in: ["PENDING", "CONFIRMED"] },
+            status: { in: blockingStatuses },
           },
         });
 
@@ -182,14 +295,16 @@ export async function POST(req: Request) {
           date: appointmentDate,
           startTime,
           endTime,
-          status: "CONFIRMED",
+          status: initialAppointmentStatus,
           totalAmount: breakdown.finalTotal,
           discountAmount: breakdown.totalDiscount + breakdown.pointsDiscount,
-          advancePaid: amountPaid,
+          advancePaid: paymentMethod === "UPI" && utrNumber ? amountPaid : 0,
           balanceDue,
-          paymentStatus,
-          paymentMethod,
+          paymentStatus: initialAppointmentStatus === "CONFIRMED" && balanceDue === 0 ? "COMPLETED" : "PENDING",
+          paymentMethod: paymentMethod === "UPI" ? "UPI" : "SALON",
+          utrNumber: utrNumber ? utrNumber.trim() : null,
           isBridal,
+          holdExpiresAt,
           isHomeVisit,
           venueAddress,
           distanceKm,
@@ -198,7 +313,7 @@ export async function POST(req: Request) {
           notes,
           lookBoardId,
           items: {
-            create: items.map((it) => ({
+            create: validatedItems.map((it) => ({
               serviceId: it.serviceId ?? null,
               bridalPackageId: it.bridalPackageId ?? null,
               mehendiDesignId: it.mehendiDesignId ?? null,
@@ -212,10 +327,10 @@ export async function POST(req: Request) {
               {
                 amount: amountPaid,
                 currency: "INR",
-                status: amountPaid > 0 ? "SUCCESS" : "INITIATED",
-                method: paymentMethod,
-                transactionRef: `TXN-${Date.now()}-${randomSuffix}`,
-                isMock: true,
+                status: paymentRecordStatus,
+                method: paymentMethod === "UPI" ? "UPI" : "SALON",
+                utrNumber: utrNumber ? utrNumber.trim() : null,
+                screenshotUrl: screenshotUrl || null,
               },
             ],
           },
@@ -226,7 +341,7 @@ export async function POST(req: Request) {
               taxAmount: breakdown.gstAmount,
               discountAmount: breakdown.totalDiscount + breakdown.pointsDiscount,
               totalAmount: breakdown.finalTotal,
-              status: balanceDue === 0 ? "PAID" : "UNPAID",
+              status: balanceDue === 0 && initialAppointmentStatus === "CONFIRMED" ? "PAID" : "UNPAID",
             },
           },
         },
@@ -235,6 +350,24 @@ export async function POST(req: Request) {
           stylist: true,
           invoice: true,
           payments: true,
+        },
+      });
+
+      // Audit Log for appointment and payment
+      await tx.auditLog.create({
+        data: {
+          action: "APPOINTMENT_CREATE",
+          entityType: "APPOINTMENT",
+          entityId: appt.id,
+          performedBy: customerEmail,
+          ipAddress: ip,
+          details: JSON.stringify({
+            appointmentNumber,
+            method: paymentMethod,
+            amount: breakdown.finalTotal,
+            utr: utrNumber || null,
+            status: initialAppointmentStatus,
+          }),
         },
       });
 
@@ -256,24 +389,6 @@ export async function POST(req: Request) {
         });
       }
 
-      // Award points earned
-      if (loggedInUserId && breakdown.pointsEarned > 0) {
-        await tx.user.update({
-          where: { id: loggedInUserId },
-          data: { loyaltyPoints: { increment: breakdown.pointsEarned } },
-        });
-        await tx.loyaltyTransaction.create({
-          data: {
-            userId: loggedInUserId,
-            points: breakdown.pointsEarned,
-            type: "EARNED",
-            description: `Earned 10% back on Appointment #${appointmentNumber}`,
-            appointmentId: appt.id,
-            balanceAfter: availableLoyaltyPoints - breakdown.pointsRedeemed + breakdown.pointsEarned,
-          },
-        });
-      }
-
       // Increment promo usage
       if (promoRecord) {
         await tx.promoCode.update({
@@ -285,7 +400,7 @@ export async function POST(req: Request) {
       return appt;
     });
 
-    // 6. Send confirmation notification & log WhatsApp message
+    // 12. Send confirmation notification & log WhatsApp message
     const msg = buildAppointmentConfirmedMessage({
       appointmentNumber: createdAppointment.appointmentNumber,
       customerName: createdAppointment.customerName,
@@ -301,13 +416,13 @@ export async function POST(req: Request) {
       userId: loggedInUserId,
       recipient: customerPhone,
       type: "APPOINTMENT_CONFIRMED",
-      title: `BEEM Appointment #${createdAppointment.appointmentNumber} Confirmed`,
+      title: `BEEM Appointment #${createdAppointment.appointmentNumber} Registered`,
       message: msg,
     });
 
     return NextResponse.json(
       {
-        message: "Appointment confirmed successfully",
+        message: "Appointment created successfully",
         appointment: createdAppointment,
         priceBreakdown: breakdown,
       },

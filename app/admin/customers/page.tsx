@@ -1,6 +1,7 @@
 import React from "react";
 import { db } from "@/lib/db";
 import { Users, Sparkles, Phone, Mail, Heart, AlertCircle } from "lucide-react";
+import { CustomerResetCodeButton } from "@/components/admin/CustomerResetCodeButton";
 
 export default async function AdminCustomersPage() {
   const customers = await db.user.findMany({
@@ -109,6 +110,13 @@ export default async function AdminCustomersPage() {
                   </div>
                 )}
               </div>
+
+              {/* Password Reset Code Generator */}
+              <CustomerResetCodeButton
+                customerId={c.id}
+                customerName={c.name}
+                customerPhone={c.phone || ""}
+              />
             </div>
           );
         })}

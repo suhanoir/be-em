@@ -2,9 +2,9 @@ import React from "react";
 import { StyleQuizWizard } from "@/components/features/StyleQuizWizard";
 
 export const metadata = {
-  title: "AI Style & Face Shape Quiz | BEEM (Beauty Empire)",
+  title: "Signature Style & Face Shape Quiz | BEEM (Beauty Empire)",
   description:
-    "Discover bespoke haircuts, makeup palettes, and clinical facials calibrated to your face shape, undertone, and lifestyle.",
+    "Discover handcrafted haircuts, makeup palettes, and clinical facials calibrated to your face shape, undertone, and lifestyle.",
 };
 
 export default function QuizPage() {

@@ -18,7 +18,7 @@ interface Service {
   description: string;
   durationMinutes: number;
   price: number;
-  discountedPrice: number | null;
+  discountedPrice?: number | null;
   image: string | null;
   isPopular: boolean;
   categoryId: string;

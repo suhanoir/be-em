@@ -13,7 +13,9 @@ import {
   Sparkles,
   ArrowUpRight,
   UserX,
+  MessageSquare,
 } from "lucide-react";
+import { generateWhatsAppLink, buildAppointmentReminderMessage } from "@/lib/notifications";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -263,8 +265,26 @@ export function AdminOverviewDashboard({
                   </p>
                 </div>
 
-                {/* Quick Status Change Actions */}
+                {/* Quick Status Change & WhatsApp Reminder Actions */}
                 <div className="flex flex-wrap items-center gap-2">
+                  <a
+                    href={generateWhatsAppLink(
+                      appt.customerPhone,
+                      buildAppointmentReminderMessage({
+                        appointmentNumber: appt.appointmentNumber,
+                        customerName: appt.customerName,
+                        timeStr: `${appt.startTime} – ${appt.endTime}`,
+                        services: appt.items.map((i: any) => i.name),
+                        stylistName: appt.stylist?.name || "Master Stylist",
+                      })
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-[11px] font-semibold flex items-center gap-1 shadow-sm"
+                  >
+                    <MessageSquare className="h-3 w-3" />
+                    <span>WhatsApp Reminder</span>
+                  </a>
                   <button
                     disabled={updatingId === appt.id}
                     onClick={() => handleUpdateStatus(appt.id, "CONFIRMED")}

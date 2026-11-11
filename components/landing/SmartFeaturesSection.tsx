@@ -1,37 +1,25 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
 import {
   Wand2,
-  Camera,
-  Bot,
+  Sparkles,
+  MessageSquare,
   Heart,
   ArrowRight,
-  Sparkles,
-  Smartphone,
-  CheckCircle,
+  ShieldCheck,
+  CheckCircle2,
 } from "lucide-react";
-import { LANDING_CONTENT } from "@/lib/landing-content";
+import { getSalonWhatsAppUrl } from "@/lib/notifications";
 
 export function SmartFeaturesSection() {
-  const features = LANDING_CONTENT.smartFeatures;
-  const shouldReduceMotion = useReducedMotion();
-
-  // Color preview mock state for Try-On card
-  const [selectedColor, setSelectedColor] = useState("#8B0000"); // Burgundy
-  const hairColors = [
-    { label: "Burgundy", hex: "#6b1426" },
-    { label: "Caramel", hex: "#b87333" },
-    { label: "Espresso", hex: "#2b1d0c" },
-    { label: "Honey", hex: "#d4a373" },
-  ];
+  const whatsappUrl = getSalonWhatsAppUrl("Hello BEEM Salon! I have a question about services and availability.");
 
   return (
     <section
       id="smart-features"
-      aria-label="Smart Salon Innovations and AI Features"
+      aria-label="Handcrafted Salon Features and Guest Conveniences"
       className="py-16 sm:py-24 bg-[#FAF5FF] dark:bg-[#140B24] transition-colors"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -39,96 +27,79 @@ export function SmartFeaturesSection() {
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-14 sm:mb-18">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-brand-lavender text-brand-deep text-xs font-semibold uppercase tracking-wider dark:bg-purple-950 dark:text-purple-200">
             <Sparkles className="w-3.5 h-3.5 text-brand-softgold" />
-            <span>Salon Tech Innovation</span>
+            <span>Salon Experience &amp; In-App Tools</span>
           </div>
 
           <h2 className="text-fluid-section font-heading font-bold text-brand-ink dark:text-white tracking-tight">
-            Smart Features Built for You
+            Curated Features Built for You
           </h2>
 
           <p className="text-base sm:text-lg text-brand-muted">
-            From client-side virtual hair tints to personalized face-shape quizzes, discover beauty tools engineered to eliminate styling guesswork.
+            From verified lookboard inspirations to diagnostic style quizzes and 1-tap WhatsApp support, discover beauty conveniences designed to eliminate guesswork.
           </p>
         </div>
 
         {/* 4 Feature Interactive Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-          {/* Card 1: Virtual Try-On Studio */}
+          {/* Card 1: Curated Looks Inspiration */}
           <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#1A102F] border border-purple-100 dark:border-purple-900/60 shadow-soft hover:shadow-glow flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-100 text-brand-royal dark:bg-purple-950 dark:text-purple-200">
-                  Virtual Studio
+                  Style Inspiration
                 </span>
-                <Camera className="w-5 h-5 text-brand-violet" />
+                <Sparkles className="w-5 h-5 text-brand-violet" />
               </div>
 
               <h3 className="font-heading font-bold text-2xl text-brand-ink dark:text-white mb-2">
-                Virtual Hairstyle & Color Studio
+                Curated Looks Gallery
               </h3>
 
               <p className="text-xs sm:text-sm text-brand-muted mb-6">
-                Upload your selfie and experiment with live canvas hair tints, dimensional balayage overlays, and trendy fringe cuts before touching scissors.
+                Browse verified haircut, makeup, and bridal inspirations handpicked by our master stylists. Save looks to your board or book the matching treatment in one click.
               </p>
 
-              {/* Looping Mini Mock Swatch Bar */}
-              <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border border-purple-100 dark:border-purple-900/40 mb-6">
-                <p className="text-[11px] font-semibold text-brand-ink dark:text-white mb-2.5">
-                  Try live hair swatch preview:
-                </p>
-                <div className="flex items-center gap-3">
-                  {hairColors.map((color) => (
-                    <button
-                      key={color.label}
-                      onClick={() => setSelectedColor(color.hex)}
-                      className={`w-8 h-8 rounded-full border-2 transition-transform ${
-                        selectedColor === color.hex
-                          ? "border-brand-royal scale-110 shadow-sm"
-                          : "border-white/80 hover:scale-105"
-                      }`}
-                      style={{ backgroundColor: color.hex }}
-                      title={color.label}
-                      aria-label={`Select ${color.label} color`}
-                    />
-                  ))}
-                  <div
-                    className="ml-auto px-3 py-1 rounded-lg text-xs font-semibold text-white shadow-sm transition-colors"
-                    style={{ backgroundColor: selectedColor }}
+              {/* Tag preview chips */}
+              <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border border-purple-100 dark:border-purple-900/40 mb-6 flex flex-wrap gap-2">
+                {["#BridalImperial", "#ButterflyLayers", "#HoneyBalayage", "#GlassSkinFacial", "#ArabicMehendi"].map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#150D27] text-xs font-semibold text-brand-royal dark:text-brand-orchid border border-purple-200 dark:border-purple-800"
                   >
-                    Simulated Tone
-                  </div>
-                </div>
+                    {tag}
+                  </span>
+                ))}
               </div>
             </div>
 
             <Link
-              href="/try-on"
+              href="/looks"
               className="inline-flex items-center gap-2 text-sm font-semibold text-brand-royal hover:text-brand-violet dark:text-brand-orchid dark:hover:text-white transition-colors group"
             >
-              <span>Launch Virtual Try-On Studio</span>
+              <span>Explore Curated Looks</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
 
-          {/* Card 2: AI Face-Shape Quiz */}
+          {/* Card 2: Signature Style Quiz */}
           <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#1A102F] border border-purple-100 dark:border-purple-900/60 shadow-soft hover:shadow-glow flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300">
-                  AI Recommendation
+                  Personalized Diagnostic
                 </span>
                 <Wand2 className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               </div>
 
               <h3 className="font-heading font-bold text-2xl text-brand-ink dark:text-white mb-2">
-                Royal Style & Face-Shape Quiz
+                Signature Style &amp; Face-Shape Quiz
               </h3>
 
               <p className="text-xs sm:text-sm text-brand-muted mb-6">
-                Take a 2-minute interactive questionnaire to analyze your face shape, undertones, and event style for algorithmic hair & makeup matches.
+                Take a 2-minute diagnostic questionnaire to analyze your facial bone structure, skin undertones, and event style for verified hair and makeup blueprints.
               </p>
 
-              {/* Mock Quiz Step Badge Preview */}
+              {/* Mock Quiz Step Preview */}
               <div className="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40 mb-6 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-bold text-amber-950 dark:text-amber-200">
@@ -139,7 +110,7 @@ export function SmartFeaturesSection() {
                   </p>
                 </div>
                 <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-200 text-amber-950 dark:bg-amber-900 dark:text-amber-100">
-                  98% Accuracy
+                  Diagnostic Logic
                 </span>
               </div>
             </div>
@@ -153,25 +124,25 @@ export function SmartFeaturesSection() {
             </Link>
           </div>
 
-          {/* Card 3: AI Beauty Concierge Chatbot */}
+          {/* Card 3: Instant Help Desk */}
           <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#1A102F] border border-purple-100 dark:border-purple-900/60 shadow-soft hover:shadow-glow flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-100 text-rose-900 dark:bg-rose-950/60 dark:text-rose-300">
-                  Instant Assistant
+                  Direct Support
                 </span>
-                <Bot className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                <MessageSquare className="w-5 h-5 text-rose-600 dark:text-rose-400" />
               </div>
 
               <h3 className="font-heading font-bold text-2xl text-brand-ink dark:text-white mb-2">
-                24/7 AI Beauty Concierge
+                Instant Salon Help Desk
               </h3>
 
               <p className="text-xs sm:text-sm text-brand-muted mb-6">
-                Ask about bridal dates, allergy safe treatments, hair color maintenance, or slot availability with instant intelligent responses.
+                Have questions about wedding dates, hygiene protocols, organic mehendi, or cancellation terms? Search our database or chat with salon reception on WhatsApp.
               </p>
 
-              {/* Chat snippet demo */}
+              {/* Chat snippet preview */}
               <div className="p-4 rounded-2xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-900/40 mb-6 space-y-2">
                 <div className="bg-white dark:bg-[#251540] p-2.5 rounded-xl text-xs text-brand-ink dark:text-purple-100 w-fit max-w-[85%] shadow-sm">
                   “Can I get organic mehendi done for my Sangeet this Thursday?”
@@ -182,47 +153,48 @@ export function SmartFeaturesSection() {
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                // Focus or click the chatbot widget button if present
-                const chatBtn = document.querySelector('button[aria-label="Open AI Beauty Concierge"]') as HTMLElement;
-                if (chatBtn) chatBtn.click();
-              }}
-              className="inline-flex items-center gap-2 text-sm font-semibold text-brand-royal hover:text-brand-violet dark:text-brand-orchid dark:hover:text-white transition-colors group self-start"
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-brand-royal hover:text-brand-violet dark:text-brand-orchid dark:hover:text-white transition-colors group"
             >
-              <span>Open Concierge Chat</span>
+              <span>Chat with Salon Concierge</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </button>
+            </a>
           </div>
 
-          {/* Card 4: Look Board */}
+          {/* Card 4: Personal Look Board */}
           <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#1A102F] border border-purple-100 dark:border-purple-900/60 shadow-soft hover:shadow-glow flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-4">
-                <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-violet-100 text-brand-deep dark:bg-violet-950/60 dark:text-violet-200">
-                  Moodboard
+                <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-100 text-brand-deep dark:bg-purple-950 dark:text-purple-300">
+                  Moodboard Sync
                 </span>
                 <Heart className="w-5 h-5 text-brand-violet" />
               </div>
 
               <h3 className="font-heading font-bold text-2xl text-brand-ink dark:text-white mb-2">
-                Personal Style Look Board
+                Personal Look Board
               </h3>
 
               <p className="text-xs sm:text-sm text-brand-muted mb-6">
-                Save inspiration photos, Pinterest hairstyles, and bridal motifs directly to your profile so your stylist sees your dream aesthetic before you sit down.
+                Curate your favorite bridal motifs, hair tones, and nail art into a unified look board. Your assigned stylist accesses it before you arrive at your appointment.
               </p>
 
-              {/* Look board preview cards */}
-              <div className="p-4 rounded-2xl bg-purple-50/60 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/40 mb-6 flex items-center justify-around text-center">
-                <div className="w-20 h-16 rounded-xl bg-gradient-to-tr from-purple-400 to-pink-300 flex items-center justify-center text-[10px] font-bold text-white shadow-sm">
-                  Balayage
+              {/* Checklist items */}
+              <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border border-purple-100 dark:border-purple-900/40 mb-6 space-y-2 text-xs">
+                <div className="flex items-center gap-2 text-brand-ink dark:text-white">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>One-click save from gallery &amp; curated looks</span>
                 </div>
-                <div className="w-20 h-16 rounded-xl bg-gradient-to-tr from-amber-400 to-rose-400 flex items-center justify-center text-[10px] font-bold text-white shadow-sm">
-                  Bridal HD
+                <div className="flex items-center gap-2 text-brand-ink dark:text-white">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Shared automatically with your assigned stylist</span>
                 </div>
-                <div className="w-20 h-16 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shadow-sm">
-                  Henna Cuff
+                <div className="flex items-center gap-2 text-brand-ink dark:text-white">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Zero account sign-up needed to start curating</span>
                 </div>
               </div>
             </div>
@@ -231,7 +203,7 @@ export function SmartFeaturesSection() {
               href="/lookboard"
               className="inline-flex items-center gap-2 text-sm font-semibold text-brand-royal hover:text-brand-violet dark:text-brand-orchid dark:hover:text-white transition-colors group"
             >
-              <span>Explore Look Board</span>
+              <span>Open My Look Board</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>

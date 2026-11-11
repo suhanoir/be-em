@@ -4,7 +4,8 @@ import { Providers } from "@/components/providers/Providers";
 import { Navbar } from "@/components/ui/Navbar";
 import { Footer } from "@/components/ui/Footer";
 import { StickyContactButtons } from "@/components/ui/StickyContactButtons";
-import { AIChatbotWidget } from "@/components/features/AIChatbotWidget";
+import { HelpAssistantWidget } from "@/components/features/HelpAssistantWidget";
+import { AnalyticsConsentBanner } from "@/components/features/AnalyticsConsentBanner";
 
 export const metadata: Metadata = {
   title: "BEEM (Beauty Empire) | Luxury Salon, Bridal Makeover & Mehendi Artistry",
@@ -47,7 +48,8 @@ export default function RootLayout({
           <main className="flex-1">{children}</main>
           <Footer />
           <StickyContactButtons />
-          <AIChatbotWidget />
+          <HelpAssistantWidget />
+          <AnalyticsConsentBanner />
         </Providers>
       </body>
     </html>

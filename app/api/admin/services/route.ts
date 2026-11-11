@@ -10,7 +10,7 @@ export async function GET() {
       orderBy: [{ categoryId: "asc" }, { price: "asc" }],
     });
     const categories = await db.serviceCategory.findMany({
-      orderBy: { orderIndex: "asc" },
+      orderBy: { sortOrder: "asc" },
     });
     return NextResponse.json({ services, categories });
   } catch (error: any) {
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { name, categoryId, description, durationMinutes, price, discountedPrice, image, isPopular } = body;
+    const { name, categoryId, description, durationMinutes, price, image, isPopular } = body;
 
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
 
@@ -38,7 +38,6 @@ export async function POST(req: Request) {
         description: description || "",
         durationMinutes: parseInt(durationMinutes, 10) || 45,
         price: parseFloat(price),
-        discountedPrice: discountedPrice ? parseFloat(discountedPrice) : null,
         image: image || "https://images.unsplash.com/photo-1560869713-7d0a29430803?w=600&q=80",
         isPopular: Boolean(isPopular),
       },
@@ -58,7 +57,7 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const { id, name, categoryId, description, durationMinutes, price, discountedPrice, image, isPopular, isActive } = body;
+    const { id, name, categoryId, description, durationMinutes, price, image, isPopular, isActive } = body;
 
     const service = await db.service.update({
       where: { id },
@@ -68,7 +67,6 @@ export async function PUT(req: Request) {
         description,
         durationMinutes: parseInt(durationMinutes, 10),
         price: parseFloat(price),
-        discountedPrice: discountedPrice ? parseFloat(discountedPrice) : null,
         image,
         isPopular: Boolean(isPopular),
         isActive: Boolean(isActive),

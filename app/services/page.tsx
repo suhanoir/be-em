@@ -12,7 +12,7 @@ export const metadata = {
 
 export default async function ServicesPage() {
   const categories = await db.serviceCategory.findMany({
-    orderBy: { orderIndex: "asc" },
+    orderBy: { sortOrder: "asc" },
   });
 
   const services = await db.service.findMany({

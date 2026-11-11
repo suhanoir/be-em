@@ -1,4 +1,5 @@
 // Prisma schema for BEEM (Beauty Empire)
+// Strictly Key-Free & AI-Free Architecture.
 // To switch to PostgreSQL: change provider to "postgresql" and replace sqlite URL with postgresql URL.
 
 generator client {
@@ -11,19 +12,21 @@ datasource db {
 }
 
 model User {
-  id             String    @id @default(cuid())
-  name           String
-  email          String    @unique
-  emailVerified  DateTime?
-  phone          String?   @unique
-  passwordHash   String?
-  role           String    @default("CUSTOMER") // "CUSTOMER", "STYLIST", "ADMIN"
-  image          String?
-  loyaltyPoints  Int       @default(0)
-  referralCode   String    @unique @default(cuid())
-  referredById   String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                      String    @id @default(cuid())
+  name                    String
+  email                   String    @unique
+  emailVerified           DateTime?
+  phone                   String?   @unique
+  passwordHash            String?
+  passwordResetCodeHash   String?
+  passwordResetExpires    DateTime?
+  role                    String    @default("CUSTOMER") // "CUSTOMER", "STYLIST", "ADMIN"
+  image                   String?
+  loyaltyPoints           Int       @default(0)
+  referralCode            String    @unique @default(cuid())
+  referredById            String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   // Relations
   profile             CustomerProfile?
@@ -82,59 +85,57 @@ model VerificationToken {
 }
 
 model CustomerProfile {
-  id                 String    @id @default(cuid())
-  userId             String    @unique
-  allergies          String?
-  skinType           String?   // "Oily", "Dry", "Combination", "Sensitive", "Normal"
-  hairType           String?   // "Straight", "Wavy", "Curly", "Coily"
-  scalpType          String?   // "Dry", "Oily", "Normal"
-  preferredStylistId String?
-  beautyGoals        String?
-  emergencyContact   String?
-  birthday           DateTime?
-  anniversary        DateTime?
-  notes              String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  allergies      String?  // Encrypted or plain text note
+  skinType       String?  // "Normal", "Dry", "Oily", "Combination", "Sensitive"
+  hairType       String?  // "Straight", "Wavy", "Curly", "Coily"
+  hairConcerns   String?  // "Frizz", "Hairfall", "Damage", "Dandruff"
+  preferences    String?  // Pressure, conversation level, fragrance preferences
+  anniversaryDate DateTime?
+  birthdayDate   DateTime?
+  notes          String?  // Internal staff notes
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Stylist {
-  id              String   @id @default(cuid())
-  userId          String?  @unique
-  name            String
-  email           String   @unique
-  phone           String
-  bio             String?
-  avatar          String?
-  specialties     String   // Comma-separated or JSON
-  experienceYears Int      @default(3)
-  rating          Float    @default(4.9)
-  reviewCount     Int      @default(0)
-  isActive        Boolean  @default(true)
-  commissionRate  Float    @default(0.15) // 15%
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(cuid())
+  userId         String?  @unique
+  name           String
+  roleTitle      String   // e.g. "Senior Hair Director", "Master Bridal Artist", "Senior Henna Artist"
+  slug           String   @unique
+  bio            String
+  avatar         String
+  specialties    String   // JSON string of specialties
+  experienceYears Int     @default(5)
+  rating         Float    @default(5.0)
+  reviewCount    Int      @default(0)
+  commissionRate Float    @default(0.15) // 15% standard commission
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   user         User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
   schedules    StylistSchedule[]
   timeOffs     TimeOff[]
   appointments Appointment[]
   reviews      Review[]
-  attendance   StaffAttendance[]
   galleryItems GalleryItem[]
+  attendance   StaffAttendance[]
 
   @@index([isActive])
 }
 
 model StylistSchedule {
-  id           String  @id @default(cuid())
-  stylistId    String
-  dayOfWeek    Int     // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-  startTime    String  @default("09:00") // 24-hr format "09:00"
-  endTime      String  @default("19:00") // 24-hr format "19:00"
-  isWorkingDay Boolean @default(true)
+  id        String  @id @default(cuid())
+  stylistId String
+  dayOfWeek Int     // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  startTime String  // e.g. "09:00"
+  endTime   String  // e.g. "19:00"
+  isWorking Boolean @default(true)
 
   stylist Stylist @relation(fields: [stylistId], references: [id], onDelete: Cascade)
 
@@ -143,49 +144,46 @@ model StylistSchedule {
 
 model TimeOff {
   id        String   @id @default(cuid())
-  stylistId String?  // Null means salon-wide holiday
+  stylistId String
   startDate DateTime
   endDate   DateTime
-  reason    String
-  type      String   @default("LEAVE") // "HOLIDAY", "SICK", "LEAVE", "BLOCKED"
+  reason    String?
   createdAt DateTime @default(now())
 
-  stylist Stylist? @relation(fields: [stylistId], references: [id], onDelete: Cascade)
+  stylist Stylist @relation(fields: [stylistId], references: [id], onDelete: Cascade)
 
-  @@index([stylistId])
-  @@index([startDate, endDate])
+  @@index([stylistId, startDate, endDate])
 }
 
 model ServiceCategory {
   id          String   @id @default(cuid())
-  name        String   @unique
+  name        String
   slug        String   @unique
   description String?
-  image       String?
-  icon        String?  // Lucide icon name
-  orderIndex  Int      @default(0)
+  icon        String   @default("Sparkles")
+  sortOrder   Int      @default(0)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
   services Service[]
+
+  @@index([sortOrder])
 }
 
 model Service {
-  id               String   @id @default(cuid())
+  id               String            @id @default(cuid())
   categoryId       String
   name             String
-  slug             String   @unique
+  slug             String            @unique
   description      String
-  durationMinutes  Int      @default(45)
+  durationMinutes  Int               @default(45)
   price            Float
-  discountedPrice  Float?
+  depositPercent   Float             @default(0.0)
+  isPopular        Boolean           @default(false)
+  isActive         Boolean           @default(true)
   image            String?
-  isPopular        Boolean  @default(false)
-  isActive         Boolean  @default(true)
-  prepInstructions String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   category         ServiceCategory   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   appointmentItems AppointmentItem[]
@@ -254,6 +252,23 @@ model GalleryItem {
   @@index([isFeatured])
 }
 
+// Curated inspiration looks (Key-free & AI-free replacement for Virtual Try-On)
+model CuratedLook {
+  id          String   @id @default(cuid())
+  title       String
+  category    String   // "Hair", "Bridal", "Mehendi", "Makeup", "Nails", "Skin"
+  imageUrl    String
+  description String
+  stylistName String?
+  tags        String   // Comma separated
+  isTrending  Boolean  @default(false)
+  serviceSlug String?
+  createdAt   DateTime @default(now())
+
+  @@index([category])
+  @@index([isTrending])
+}
+
 model Appointment {
   id                 String   @id @default(cuid())
   appointmentNumber  String   @unique
@@ -265,14 +280,16 @@ model Appointment {
   date               DateTime // Appointment date (00:00:00 UTC representation)
   startTime          String   // e.g. "10:00"
   endTime            String   // e.g. "11:30"
-  status             String   @default("PENDING") // "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED", "NO_SHOW"
+  status             String   @default("PENDING_PAYMENT") // "PENDING_PAYMENT", "PAYMENT_SUBMITTED", "CONFIRMED", "COMPLETED", "CANCELLED", "NO_SHOW"
   totalAmount        Float
   discountAmount     Float    @default(0)
   advancePaid        Float    @default(0)
   balanceDue         Float    @default(0)
   paymentStatus      String   @default("PENDING") // "PENDING", "PARTIAL", "COMPLETED", "REFUNDED"
-  paymentMethod      String   @default("CASH_AT_SALON") // "MOCK_PAYMENT", "RAZORPAY_MOCK", "RAZORPAY_UPI", "RAZORPAY_CARD", "CASH_AT_SALON"
+  paymentMethod      String   @default("SALON") // "SALON", "UPI"
+  utrNumber          String?  // UPI reference number
   isBridal           Boolean  @default(false)
+  holdExpiresAt      DateTime? // Tentative 24-hour hold for bridal dates pending advance verification
   isHomeVisit        Boolean  @default(false)
   venueAddress       String?
   distanceKm         Float    @default(0)
@@ -318,23 +335,27 @@ model AppointmentItem {
 }
 
 model Payment {
-  id                String   @id @default(cuid())
-  appointmentId     String
-  amount            Float
-  currency          String   @default("INR")
-  status            String   @default("INITIATED") // "INITIATED", "SUCCESS", "FAILED", "REFUNDED"
-  method            String   // "MOCK_PAYMENT", "RAZORPAY", "CASH"
-  razorpayOrderId   String?
-  razorpayPaymentId String?
-  razorpaySignature String?
-  transactionRef    String?  @unique
-  isMock            Boolean  @default(true)
-  createdAt         DateTime @default(now())
+  id              String   @id @default(cuid())
+  appointmentId   String
+  amount          Float
+  currency        String   @default("INR")
+  status          String   @default("PENDING") // "PENDING", "SUBMITTED", "CONFIRMED", "REJECTED", "REFUNDED"
+  method          String   @default("SALON") // "SALON", "UPI"
+  utrNumber       String?  @unique // Unique: guarantees one UTR cannot be reused on two bookings!
+  screenshotUrl   String?
+  verifiedAt      DateTime?
+  verifiedBy      String?
+  rejectionReason String?
+  refundAmount    Float?
+  refundReason    String?
+  refundedAt      DateTime?
+  createdAt       DateTime @default(now())
 
   appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
 
   @@index([appointmentId])
   @@index([status])
+  @@index([utrNumber])
 }
 
 model Invoice {
@@ -346,7 +367,6 @@ model Invoice {
   discountAmount Float     @default(0)
   totalAmount    Float
   status         String    @default("PAID") // "PAID", "UNPAID", "CANCELLED"
-  pdfUrl         String?
   issuedAt       DateTime  @default(now())
 
   appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
@@ -478,7 +498,7 @@ model Offer {
   description  String
   validUntil   DateTime
   isFestival   Boolean   @default(false)
-  festivalName String?   // "Diwali Special", "Karva Chauth Glow", "Wedding Season", "Eid Special"
+  festivalName String?   // "Diwali Celebration", "Karva Chauth Radiance", "Wedding Season", "Eid Special"
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
 
@@ -592,8 +612,8 @@ model BlogPost {
 model Notification {
   id        String    @id @default(cuid())
   userId    String?
-  type      String    // "APPOINTMENT_CONFIRMED", "REMINDER_24H", "REMINDER_2H", "PAYMENT_SUCCESS", "PROMO", "SYSTEM"
-  channel   String    @default("WHATSAPP") // "WHATSAPP", "SMS", "EMAIL", "IN_APP"
+  type      String    // "APPOINTMENT_CONFIRMED", "REMINDER_24H", "REMINDER_2H", "PAYMENT_CONFIRMED", "PROMO", "SYSTEM"
+  channel   String    @default("IN_APP") // "IN_APP", "MANUAL_WHATSAPP"
   recipient String    // Phone or email
   title     String
   message   String
@@ -606,6 +626,56 @@ model Notification {
   @@index([userId])
   @@index([type])
   @@index([status])
+}
+
+model FaqItem {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String
+  category  String   @default("general") // "booking", "bridal", "hygiene", "payments"
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([isActive])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String   // "PAYMENT_CONFIRM", "PAYMENT_REJECT", "REFUND", "PASSWORD_RESET_GENERATE", "HOLD_EXPIRE", "TIME_OFF_BLOCK"
+  entityType  String   // "APPOINTMENT", "PAYMENT", "USER", "BRIDAL_HOLD"
+  entityId    String?
+  performedBy String   // Admin user email or "SYSTEM"
+  details     String?  // JSON string of audit payload
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model RateLimit {
+  id        String   @id @default(cuid())
+  key       String   @unique // Identifier e.g. "ip:127.0.0.1:login"
+  points    Int      @default(1)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model AnalyticsEvent {
+  id         String   @id @default(cuid())
+  eventName  String
+  path       String
+  properties String?  // JSON string
+  createdAt  DateTime @default(now())
+
+  @@index([eventName])
+  @@index([createdAt])
 }
 
 model Setting {

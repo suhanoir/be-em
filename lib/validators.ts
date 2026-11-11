@@ -6,11 +6,14 @@ export const registerSchema = z.object({
   phone: z.string().min(10, "Phone number must be at least 10 digits"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   referralCode: z.string().optional(),
+  hp_website: z.string().optional(), // Honeypot field for bot protection
+  formTimestamp: z.number().optional(), // Bot submission speed check
 });
 
 export const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
+  hp_website: z.string().optional(),
 });
 
 export const bookingItemSchema = z.object({
@@ -18,7 +21,7 @@ export const bookingItemSchema = z.object({
   bridalPackageId: z.string().optional(),
   mehendiDesignId: z.string().optional(),
   name: z.string(),
-  price: z.number().positive(),
+  price: z.number().nonnegative(),
   durationMinutes: z.number().int().positive(),
 });
 
@@ -40,7 +43,16 @@ export const createBookingSchema = z.object({
   promoCode: z.string().optional(),
   loyaltyPointsToRedeem: z.number().int().min(0).default(0),
   payDepositOnly: z.boolean().default(false),
-  paymentMethod: z.enum(["MOCK_PAYMENT", "RAZORPAY_MOCK", "RAZORPAY_UPI", "RAZORPAY_CARD", "CASH_AT_SALON"]).default("MOCK_PAYMENT"),
+  paymentMethod: z.enum(["SALON", "UPI", "MOCK_PAYMENT", "CASH_AT_SALON"]).default("SALON"),
+  utrNumber: z.string().trim().optional(),
+  screenshotUrl: z.string().optional(),
+  hp_website: z.string().optional(), // Honeypot field
+  formTimestamp: z.number().optional(), // Form render timestamp for bot detection
+});
+
+export const adminPaymentVerifySchema = z.object({
+  action: z.enum(["CONFIRM", "REJECT"]),
+  rejectionReason: z.string().optional(),
 });
 
 export const customerProfileSchema = z.object({
@@ -63,11 +75,8 @@ export const createReviewSchema = z.object({
   photoUrl: z.string().optional(),
 });
 
-export const chatMessageSchema = z.object({
-  messages: z.array(
-    z.object({
-      role: z.enum(["user", "assistant", "system"]),
-      content: z.string(),
-    })
-  ),
+export const resetPasswordWithCodeSchema = z.object({
+  email: z.string().email("Valid email required"),
+  code: z.string().min(6, "Reset code must be at least 6 digits").max(10),
+  newPassword: z.string().min(6, "New password must be at least 6 characters"),
 });

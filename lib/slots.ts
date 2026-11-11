@@ -1,8 +1,35 @@
 // Asia/Kolkata timezone helpers and slot calculation engine
 import { toZonedTime, format as formatZoned } from "date-fns-tz";
 import { parseISO, addMinutes, isBefore, isAfter, setHours, setMinutes, isSameDay } from "date-fns";
+import { db } from "@/lib/db";
 
 export const SALON_TIMEZONE = "Asia/Kolkata";
+
+/**
+ * Automatically releases tentative bridal holds older than 24 hours
+ * if advance payment has not been submitted/confirmed.
+ */
+export async function autoReleaseExpiredBridalHolds(prismaClient?: any) {
+  const client = prismaClient || db;
+  const now = new Date();
+  try {
+    const expired = await client.appointment.updateMany({
+      where: {
+        isBridal: true,
+        status: "PENDING_PAYMENT",
+        holdExpiresAt: { lt: now },
+      },
+      data: {
+        status: "CANCELLED",
+        cancellationReason: "Tentative 24-hour advance deposit hold expired without payment submission.",
+      },
+    });
+    return expired.count;
+  } catch (err) {
+    console.error("Auto release bridal holds error:", err);
+    return 0;
+  }
+}
 
 /**
  * Returns current date/time converted to Asia/Kolkata
@@ -39,7 +66,7 @@ export function minutesToTimeString(minutes: number): string {
 export interface ExistingBooking {
   startTime: string; // "10:00"
   endTime: string;   // "11:00"
-  status: string;    // "PENDING", "CONFIRMED", etc.
+  status: string;    // "PENDING_PAYMENT", "PAYMENT_SUBMITTED", "CONFIRMED", etc.
   stylistId?: string | null;
 }
 
@@ -47,13 +74,15 @@ export interface StylistWorkingSchedule {
   dayOfWeek: number;
   startTime: string; // "09:00"
   endTime: string;   // "19:00"
-  isWorkingDay: boolean;
+  isWorking?: boolean;
+  isWorkingDay?: boolean;
 }
 
 export interface TimeOffRecord {
   startDate: Date;
   endDate: Date;
-  type: string;
+  reason?: string | null;
+  type?: string;
 }
 
 export interface GenerateSlotsOptions {
@@ -93,7 +122,8 @@ export function generateAvailableSlots(options: GenerateSlotsOptions): {
   } = options;
 
   // Determine working boundaries
-  if (schedule && !schedule.isWorkingDay) {
+  const isWorking = schedule ? (schedule.isWorking !== undefined ? schedule.isWorking : schedule.isWorkingDay) : true;
+  if (schedule && !isWorking) {
     return []; // Stylist has day off
   }
 
@@ -118,10 +148,14 @@ export function generateAvailableSlots(options: GenerateSlotsOptions): {
     }
   }
 
-  // Active bookings filter
-  const activeBookings = existingBookings.filter(
-    (b) => b.status === "CONFIRMED" || b.status === "PENDING"
-  );
+  // Active bookings filter: include pending, payment submitted, and confirmed
+  const activeStatuses = new Set([
+    "CONFIRMED",
+    "PENDING",
+    "PENDING_PAYMENT",
+    "PAYMENT_SUBMITTED",
+  ]);
+  const activeBookings = existingBookings.filter((b) => activeStatuses.has(b.status));
 
   const slots: {
     time: string;

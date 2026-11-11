@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { generateAvailableSlots, timeStringToMinutes, minutesToTimeString } from "@/lib/slots";
+import {
+  generateAvailableSlots,
+  timeStringToMinutes,
+  minutesToTimeString,
+  autoReleaseExpiredBridalHolds,
+} from "@/lib/slots";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +17,14 @@ export async function GET(req: Request) {
     const stylistId = searchParams.get("stylistId");
 
     if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-      return NextResponse.json({ error: "Valid date query parameter (YYYY-MM-DD) is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Valid date query parameter (YYYY-MM-DD) is required" },
+        { status: 400 }
+      );
     }
+
+    // Auto-release any expired bridal holds before slot calculations
+    await autoReleaseExpiredBridalHolds();
 
     const selectedDate = new Date(`${dateStr}T00:00:00.000Z`);
     const dayOfWeek = selectedDate.getUTCDay();
@@ -27,9 +38,9 @@ export async function GET(req: Request) {
     // Salon-wide time-offs / holidays
     const salonTimeOffs = await db.timeOff.findMany({
       where: {
-        stylistId: null,
         startDate: { lte: selectedDate },
         endDate: { gte: selectedDate },
+        reason: { contains: "Holiday" },
       },
     });
 
@@ -41,6 +52,8 @@ export async function GET(req: Request) {
         slots: [],
       });
     }
+
+    const activeStatuses = ["PENDING", "PENDING_PAYMENT", "PAYMENT_SUBMITTED", "CONFIRMED"];
 
     // If specific stylist selected:
     if (stylistId && stylistId !== "any") {
@@ -68,7 +81,7 @@ export async function GET(req: Request) {
         where: {
           stylistId,
           date: selectedDate,
-          status: { in: ["PENDING", "CONFIRMED"] },
+          status: { in: activeStatuses },
         },
         select: {
           startTime: true,
@@ -109,7 +122,7 @@ export async function GET(req: Request) {
     const allAppointments = await db.appointment.findMany({
       where: {
         date: selectedDate,
-        status: { in: ["PENDING", "CONFIRMED"] },
+        status: { in: activeStatuses },
       },
       select: {
         startTime: true,
@@ -123,7 +136,10 @@ export async function GET(req: Request) {
     const startM = timeStringToMinutes(salonOpen);
     const endM = timeStringToMinutes(salonClose);
 
-    const consolidatedSlotsMap = new Map<string, { time: string; endTime: string; isAvailable: boolean; availableStylists: string[] }>();
+    const consolidatedSlotsMap = new Map<
+      string,
+      { time: string; endTime: string; isAvailable: boolean; availableStylists: string[] }
+    >();
 
     for (let cur = startM; cur + durationMinutes <= endM; cur += 30) {
       const time = minutesToTimeString(cur);
@@ -171,6 +187,9 @@ export async function GET(req: Request) {
     });
   } catch (error: any) {
     console.error("Slots API error:", error);
-    return NextResponse.json({ error: "Failed to generate slots", message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to generate slots", message: error.message },
+      { status: 500 }
+    );
   }
 }

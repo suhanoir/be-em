@@ -10,15 +10,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const { stylistId, startDate, endDate, reason, type } = await req.json();
+    const { stylistId, startDate, endDate, reason } = await req.json();
+
+    if (!stylistId) {
+      return NextResponse.json({ error: "Stylist ID is required" }, { status: 400 });
+    }
 
     const timeOff = await db.timeOff.create({
       data: {
-        stylistId: stylistId || null,
+        stylistId,
         startDate: new Date(`${startDate}T00:00:00.000Z`),
         endDate: new Date(`${endDate}T23:59:59.000Z`),
-        reason,
-        type: type || "HOLIDAY",
+        reason: reason || "Personal Time Off",
       },
       include: { stylist: true },
     });

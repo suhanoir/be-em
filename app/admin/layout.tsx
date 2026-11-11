@@ -17,6 +17,7 @@ import {
   LogOut,
   ExternalLink,
   Bell,
+  CreditCard,
 } from "lucide-react";
 import { getNowInKolkata, formatInKolkata } from "@/lib/timezone";
 
@@ -42,6 +43,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin", label: "Overview & Analytics", icon: LayoutDashboard },
     { href: "/admin/calendar", label: "Booking Calendar", icon: Calendar },
     { href: "/admin/appointments", label: "All Appointments", icon: Clock },
+    { href: "/admin/payments", label: "Verify Payments", icon: CreditCard },
     { href: "/admin/services", label: "Services CRUD", icon: Scissors },
     { href: "/admin/stylists", label: "Stylists & Schedules", icon: UserCheck },
     { href: "/admin/time-off", label: "Time-Off & Holidays", icon: Calendar },

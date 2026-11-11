@@ -13,6 +13,8 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [referralCode, setReferralCode] = useState("");
+  const [hpWebsite, setHpWebsite] = useState("");
+  const [formTimestamp] = useState<number>(() => Date.now());
 
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -32,6 +34,8 @@ export default function RegisterPage() {
           phone,
           password,
           referralCode: referralCode.trim() || undefined,
+          hp_website: hpWebsite,
+          formTimestamp,
         }),
       });
 
@@ -79,6 +83,15 @@ export default function RegisterPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            <input
+              type="text"
+              name="hp_website"
+              value={hpWebsite}
+              onChange={(e) => setHpWebsite(e.target.value)}
+              className="hidden"
+              tabIndex={-1}
+              autoComplete="off"
+            />
             <div>
               <label className="text-[11px] font-semibold text-brand-muted">Full Name *</label>
               <div className="relative mt-1">

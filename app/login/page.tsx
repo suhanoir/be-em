@@ -4,21 +4,13 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { Crown, Sparkles, AlertCircle, Phone, Mail, Lock, KeyRound } from "lucide-react";
+import { Crown, Sparkles, AlertCircle, Mail, Lock, ShieldCheck } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [tab, setTab] = useState<"email" | "otp">("email");
-
-  // Email form
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  // OTP form
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-
+  const [hpWebsite, setHpWebsite] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -42,29 +34,10 @@ export default function LoginPage() {
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError("");
 
-    const res = await signIn("credentials", {
-      redirect: false,
-      email,
-      password,
-    });
-
-    if (res?.error) {
-      setError(res.error);
-      setIsLoading(false);
-    } else {
-      router.push("/account");
-      router.refresh();
-    }
-  };
-
-  const handleOtpSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!otpSent) {
-      // Simulate sending OTP
-      setOtpSent(true);
+    if (hpWebsite) {
+      // Honeypot caught bot
+      setError("Login rejected.");
       return;
     }
 
@@ -73,9 +46,8 @@ export default function LoginPage() {
 
     const res = await signIn("credentials", {
       redirect: false,
-      isOtpLogin: "true",
-      phone,
-      otp,
+      email,
+      password,
     });
 
     if (res?.error) {
@@ -127,36 +99,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Tab Selector */}
-          <div className="grid grid-cols-2 p-1 rounded-2xl bg-purple-50 dark:bg-purple-950/40 text-xs font-semibold">
-            <button
-              onClick={() => {
-                setTab("email");
-                setError("");
-              }}
-              className={`py-2 rounded-xl transition-all ${
-                tab === "email"
-                  ? "bg-white dark:bg-[#1A102F] text-brand-deep dark:text-white shadow-sm"
-                  : "text-brand-muted"
-              }`}
-            >
-              Email &amp; Password
-            </button>
-            <button
-              onClick={() => {
-                setTab("otp");
-                setError("");
-              }}
-              className={`py-2 rounded-xl transition-all ${
-                tab === "otp"
-                  ? "bg-white dark:bg-[#1A102F] text-brand-deep dark:text-white shadow-sm"
-                  : "text-brand-muted"
-              }`}
-            >
-              Phone OTP
-            </button>
-          </div>
-
           {/* Error Banner */}
           {error && (
             <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2">
@@ -166,94 +108,64 @@ export default function LoginPage() {
           )}
 
           {/* Email Sign In Form */}
-          {tab === "email" ? (
-            <form onSubmit={handleEmailSubmit} className="space-y-4">
-              <div>
-                <label className="text-[11px] font-semibold text-brand-muted">Email Address</label>
-                <div className="relative mt-1">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-muted" />
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="customer@beem.test"
-                    className="w-full rounded-xl border border-purple-200 pl-10 pr-3 py-2.5 text-xs text-brand-ink dark:bg-[#150D27] dark:border-purple-800 dark:text-white"
-                  />
-                </div>
-              </div>
+          <form onSubmit={handleEmailSubmit} className="space-y-4">
+            {/* Honeypot field */}
+            <input
+              type="text"
+              name="hp_website"
+              value={hpWebsite}
+              onChange={(e) => setHpWebsite(e.target.value)}
+              className="hidden"
+              tabIndex={-1}
+              autoComplete="off"
+            />
 
-              <div>
+            <div>
+              <label className="text-[11px] font-semibold text-brand-muted">Email Address</label>
+              <div className="relative mt-1">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-muted" />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="customer@beem.test"
+                  className="w-full rounded-xl border border-purple-200 pl-10 pr-3 py-2.5 text-xs text-brand-ink dark:bg-[#150D27] dark:border-purple-800 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between">
                 <label className="text-[11px] font-semibold text-brand-muted">Password</label>
-                <div className="relative mt-1">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-muted" />
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full rounded-xl border border-purple-200 pl-10 pr-3 py-2.5 text-xs text-brand-ink dark:bg-[#150D27] dark:border-purple-800 dark:text-white"
-                  />
-                </div>
+                <Link
+                  href="/reset-password"
+                  className="text-[11px] font-semibold text-brand-violet dark:text-brand-orchid hover:underline"
+                >
+                  Forgot password?
+                </Link>
               </div>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-3.5 rounded-full bg-brand-violet text-white text-xs font-bold hover:bg-brand-royal transition-all shadow-soft disabled:opacity-50"
-              >
-                {isLoading ? "Signing In..." : "Sign In to Account"}
-              </button>
-            </form>
-          ) : (
-            /* Phone OTP Form */
-            <form onSubmit={handleOtpSubmit} className="space-y-4">
-              <div>
-                <label className="text-[11px] font-semibold text-brand-muted">Mobile Number</label>
-                <div className="relative mt-1">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-muted" />
-                  <input
-                    type="tel"
-                    required
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+91 98765 00000"
-                    className="w-full rounded-xl border border-purple-200 pl-10 pr-3 py-2.5 text-xs text-brand-ink dark:bg-[#150D27] dark:border-purple-800 dark:text-white"
-                  />
-                </div>
+              <div className="relative mt-1">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-muted" />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full rounded-xl border border-purple-200 pl-10 pr-3 py-2.5 text-xs text-brand-ink dark:bg-[#150D27] dark:border-purple-800 dark:text-white"
+                />
               </div>
+            </div>
 
-              {otpSent && (
-                <div>
-                  <div className="flex justify-between items-center">
-                    <label className="text-[11px] font-semibold text-brand-muted">Enter 6-Digit OTP</label>
-                    <span className="text-[10px] text-emerald-600 font-semibold">Demo Code: 123456</span>
-                  </div>
-                  <div className="relative mt-1">
-                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-muted" />
-                    <input
-                      type="text"
-                      maxLength={6}
-                      required
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      placeholder="123456"
-                      className="w-full rounded-xl border border-purple-200 pl-10 pr-3 py-2.5 text-xs font-mono tracking-widest text-brand-ink dark:bg-[#150D27] dark:border-purple-800 dark:text-white"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-3.5 rounded-full bg-brand-violet text-white text-xs font-bold hover:bg-brand-royal transition-all shadow-soft disabled:opacity-50"
-              >
-                {!otpSent ? "Send OTP Code" : isLoading ? "Verifying..." : "Verify & Sign In"}
-              </button>
-            </form>
-          )}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-3.5 rounded-full bg-brand-violet text-white text-xs font-bold hover:bg-brand-royal transition-all shadow-soft disabled:opacity-50"
+            >
+              {isLoading ? "Signing In..." : "Sign In to Account"}
+            </button>
+          </form>
 
           {/* Bottom link to Register */}
           <div className="text-center pt-2 border-t border-purple-100 dark:border-purple-900 text-xs text-brand-muted">

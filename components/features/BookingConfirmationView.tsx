@@ -59,6 +59,16 @@ export function BookingConfirmationView({ appointment }: { appointment: any }) {
       `DESCRIPTION:Appointment #${appointment.appointmentNumber} with ${appointment.stylist?.name || "Master Stylist"}. Total: INR ${appointment.totalAmount}`,
       "LOCATION:Shop 12-14, Luxury Promenade, 100 Feet Road, Indiranagar, Bengaluru",
       "STATUS:CONFIRMED",
+      "BEGIN:VALARM",
+      "TRIGGER:-P1D",
+      "ACTION:DISPLAY",
+      "DESCRIPTION:Reminder: BEEM Salon Appointment Tomorrow",
+      "END:VALARM",
+      "BEGIN:VALARM",
+      "TRIGGER:-PT2H",
+      "ACTION:DISPLAY",
+      "DESCRIPTION:Reminder: BEEM Salon Appointment in 2 Hours",
+      "END:VALARM",
       "END:VEVENT",
       "END:VCALENDAR",
     ].join("\r\n");
@@ -114,24 +124,52 @@ export function BookingConfirmationView({ appointment }: { appointment: any }) {
               className={`h-14 w-14 rounded-full flex items-center justify-center shrink-0 ${
                 status === "CANCELLED"
                   ? "bg-red-100 text-red-600 dark:bg-red-950"
+                  : status === "PAYMENT_SUBMITTED"
+                  ? "bg-amber-100 text-amber-700 dark:bg-amber-950"
+                  : status === "PENDING_PAYMENT"
+                  ? "bg-amber-100 text-amber-700 dark:bg-amber-950"
                   : "bg-emerald-100 text-emerald-600 dark:bg-emerald-950"
               }`}
             >
               {status === "CANCELLED" ? (
                 <XCircle className="h-8 w-8" />
+              ) : status === "PAYMENT_SUBMITTED" || status === "PENDING_PAYMENT" ? (
+                <Clock className="h-8 w-8 text-amber-600" />
               ) : (
                 <CheckCircle2 className="h-8 w-8" />
               )}
             </div>
             <div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-brand-violet">
-                {status === "CANCELLED" ? "Booking Cancelled" : "Booking Confirmed"}
+              <span
+                className={`text-[11px] font-bold uppercase tracking-wider ${
+                  status === "CANCELLED"
+                    ? "text-red-600"
+                    : status === "PAYMENT_SUBMITTED"
+                    ? "text-amber-700 dark:text-amber-400"
+                    : status === "PENDING_PAYMENT"
+                    ? "text-amber-700 dark:text-amber-400"
+                    : "text-brand-violet"
+                }`}
+              >
+                {status === "CANCELLED"
+                  ? "Booking Cancelled"
+                  : status === "PAYMENT_SUBMITTED"
+                  ? "Payment Submitted • Verification in Progress"
+                  : status === "PENDING_PAYMENT"
+                  ? appointment.isBridal
+                    ? "Tentative 24-Hour Hold"
+                    : "Payment at Salon Reception"
+                  : "Booking Confirmed"}
               </span>
               <h1 className="font-heading text-2xl sm:text-3xl font-bold text-brand-ink dark:text-white">
                 #{appointment.appointmentNumber}
               </h1>
               <p className="text-xs text-brand-muted mt-0.5">
-                Confirmation logged & WhatsApp reminder scheduled (24h and 2h prior).
+                {status === "PAYMENT_SUBMITTED"
+                  ? `UTR Reference: ${appointment.utrNumber || "Logged"}. Salon reception verifies all direct transfers within minutes.`
+                  : status === "PENDING_PAYMENT" && appointment.isBridal
+                  ? "Bridal slot held for 24 hours. Submit advance deposit to guarantee confirmation."
+                  : "Confirmation logged & WhatsApp reminder scheduled (24h and 2h prior)."}
               </p>
             </div>
           </div>

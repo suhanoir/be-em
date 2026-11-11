@@ -128,21 +128,21 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Smart Features & Explore */}
+          {/* Curated Experience & Explore */}
           <div>
             <h3 className="font-heading text-lg font-bold text-brand-deep dark:text-brand-orchid mb-4">
-              Smart Experience
+              Salon Highlights
             </h3>
             <ul className="space-y-2.5 text-sm text-brand-muted">
               <li>
                 <Link href="/quiz" className="hover:text-brand-violet flex items-center gap-1.5 transition-colors">
                   <Sparkles className="h-3.5 w-3.5 text-brand-violet" />
-                  AI Style Quiz
+                  Signature Style Quiz
                 </Link>
               </li>
               <li>
-                <Link href="/try-on" className="hover:text-brand-violet transition-colors">
-                  Virtual Try-On Studio
+                <Link href="/looks" className="hover:text-brand-violet transition-colors">
+                  Curated Looks Gallery
                 </Link>
               </li>
               <li>

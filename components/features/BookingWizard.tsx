@@ -19,7 +19,13 @@ import {
   AlertCircle,
   Users,
   MapPin,
+  QrCode,
+  Upload,
+  Copy,
+  Smartphone,
+  ShieldCheck,
 } from "lucide-react";
+import QRCode from "qrcode";
 import { formatInKolkata, getNowInKolkata } from "@/lib/timezone";
 
 interface ServiceItem {
@@ -27,7 +33,7 @@ interface ServiceItem {
   name: string;
   durationMinutes: number;
   price: number;
-  discountedPrice: number | null;
+  discountedPrice?: number | null;
   image: string | null;
   category: { name: string };
 }
@@ -119,8 +125,16 @@ export function BookingWizard({
   const [appliedPromo, setAppliedPromo] = useState<any>(null);
   const [promoError, setPromoError] = useState("");
 
-  // Payment Option
-  const [paymentChoice, setPaymentChoice] = useState<"MOCK_PAYMENT" | "DEPOSIT_ONLY" | "CASH_AT_SALON">("MOCK_PAYMENT");
+  // Payment Option & Verification State
+  const [paymentChoice, setPaymentChoice] = useState<"SALON" | "UPI">("SALON");
+  const [payDepositChoice, setPayDepositChoice] = useState(false);
+  const [utrNumber, setUtrNumber] = useState("");
+  const [screenshotUrl, setScreenshotUrl] = useState("");
+  const [isUploadingScreenshot, setIsUploadingScreenshot] = useState(false);
+  const [upiQrDataUrl, setUpiQrDataUrl] = useState("");
+  const [copiedUpi, setCopiedUpi] = useState(false);
+  const [hpWebsite, setHpWebsite] = useState("");
+  const [formTimestamp, setFormTimestamp] = useState<number>(() => Date.now());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState("");
 
@@ -256,6 +270,73 @@ export function BookingWizard({
     );
   };
 
+  // Payable amount based on deposit selection
+  const payableAmount = payDepositChoice && selectedBridal ? depositAmount : finalTotal;
+  const salonUpiId = "beem.luxury@upi";
+  const salonPayeeName = "BEEM Beauty Empire";
+
+  // Build standard UPI URL
+  const upiUrl = React.useMemo(() => {
+    if (payableAmount <= 0) return "";
+    const note = encodeURIComponent(`BEEM Salon Booking`);
+    return `upi://pay?pa=${encodeURIComponent(salonUpiId)}&pn=${encodeURIComponent(
+      salonPayeeName
+    )}&am=${payableAmount.toFixed(2)}&cu=INR&tn=${note}`;
+  }, [payableAmount]);
+
+  // Generate local QR code whenever UPI is active
+  useEffect(() => {
+    if (paymentChoice === "UPI" && upiUrl) {
+      QRCode.toDataURL(upiUrl, {
+        width: 240,
+        margin: 2,
+        color: {
+          dark: "#4C1D95",
+          light: "#FFFFFF",
+        },
+      })
+        .then((url) => setUpiQrDataUrl(url))
+        .catch((err) => console.error("QR generation failed", err));
+    }
+  }, [paymentChoice, upiUrl]);
+
+  const handleCopyUpi = () => {
+    navigator.clipboard.writeText(salonUpiId);
+    setCopiedUpi(true);
+    setTimeout(() => setCopiedUpi(false), 2000);
+  };
+
+  const handleUploadScreenshot = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setBookingError("Screenshot exceeds 5MB size limit");
+      return;
+    }
+
+    setIsUploadingScreenshot(true);
+    setBookingError("");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setBookingError(data.error || "Failed to upload screenshot");
+      } else {
+        setScreenshotUrl(data.url);
+      }
+    } catch (err: any) {
+      setBookingError(err.message || "Failed to upload file");
+    } finally {
+      setIsUploadingScreenshot(false);
+    }
+  };
+
   // Promo code validation
   const handleApplyPromo = async () => {
     if (!promoCodeInput.trim()) return;
@@ -289,6 +370,14 @@ export function BookingWizard({
       return;
     }
 
+    if (paymentChoice === "UPI") {
+      const cleanUtr = utrNumber.trim();
+      if (!cleanUtr || cleanUtr.length !== 12) {
+        setBookingError("Please enter the 12-digit UPI Reference Number (UTR) from your payment app after completing the transaction.");
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setBookingError("");
 
@@ -307,8 +396,12 @@ export function BookingWizard({
           isBridal: Boolean(selectedBridal),
           notes,
           promoCode: appliedPromo?.code,
-          payDepositOnly: paymentChoice === "DEPOSIT_ONLY",
-          paymentMethod: paymentChoice === "CASH_AT_SALON" ? "CASH_AT_SALON" : "MOCK_PAYMENT",
+          payDepositOnly: payDepositChoice && Boolean(selectedBridal),
+          paymentMethod: paymentChoice,
+          utrNumber: paymentChoice === "UPI" ? utrNumber.trim() : undefined,
+          screenshotUrl: screenshotUrl || undefined,
+          hp_website: hpWebsite,
+          formTimestamp,
         }),
       });
 
@@ -733,54 +826,213 @@ export function BookingWizard({
                       className="w-full mt-1 rounded-xl border border-purple-200 p-2 text-xs text-brand-ink dark:bg-[#150D27] dark:border-purple-800 dark:text-white"
                     />
                   </div>
+                  {/* Anti-Bot Honeypot Field */}
+                  <input
+                    type="text"
+                    name="hp_website"
+                    value={hpWebsite}
+                    onChange={(e) => setHpWebsite(e.target.value)}
+                    className="hidden"
+                    tabIndex={-1}
+                    autoComplete="off"
+                  />
                 </div>
               </div>
 
               {/* Payment Methods */}
-              <div className="space-y-3 pt-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-brand-deep dark:text-purple-300">
-                  Payment Preference
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div
-                    onClick={() => setPaymentChoice("MOCK_PAYMENT")}
-                    className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                      paymentChoice === "MOCK_PAYMENT"
-                        ? "border-brand-violet bg-purple-50 dark:bg-purple-950/60 shadow-sm"
-                        : "border-purple-100 dark:border-purple-900 bg-white dark:bg-[#150D27]"
-                    }`}
-                  >
-                    <CreditCard className="h-5 w-5 text-brand-violet mb-2" />
-                    <p className="text-xs font-bold text-brand-ink dark:text-white">Pay Online in Full</p>
-                    <p className="text-[10px] text-brand-muted">UPI / Cards / Mock Gateway</p>
-                  </div>
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-brand-deep dark:text-purple-300">
+                    Payment Preference
+                  </h3>
+                  <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    <span>100% Direct Salon Payment • Zero 3rd-Party Keys</span>
+                  </span>
+                </div>
 
-                  <div
-                    onClick={() => setPaymentChoice("DEPOSIT_ONLY")}
-                    className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                      paymentChoice === "DEPOSIT_ONLY"
-                        ? "border-brand-violet bg-purple-50 dark:bg-purple-950/60 shadow-sm"
-                        : "border-purple-100 dark:border-purple-900 bg-white dark:bg-[#150D27]"
-                    }`}
-                  >
-                    <Crown className="h-5 w-5 text-amber-500 mb-2" />
-                    <p className="text-xs font-bold text-brand-ink dark:text-white">Pay Deposit (Hold)</p>
-                    <p className="text-[10px] text-brand-muted">Advance: ₹{depositAmount.toLocaleString("en-IN")}</p>
+                {/* Bridal Deposit Toggle */}
+                {selectedBridal && (
+                  <div className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                        Bridal Suite Deposit Option:
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPayDepositChoice(true)}
+                          className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                            payDepositChoice
+                              ? "bg-amber-500 text-brand-ink shadow-sm"
+                              : "bg-white dark:bg-[#1A102F] text-brand-muted border border-amber-300"
+                          }`}
+                        >
+                          Advance Deposit (₹{depositAmount.toLocaleString("en-IN")})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPayDepositChoice(false)}
+                          className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                            !payDepositChoice
+                              ? "bg-amber-500 text-brand-ink shadow-sm"
+                              : "bg-white dark:bg-[#1A102F] text-brand-muted border border-amber-300"
+                          }`}
+                        >
+                          Full Total (₹{finalTotal.toLocaleString("en-IN")})
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-amber-800/80 dark:text-amber-300">
+                      Paying the advance deposit places your bridal slot on a 24-hour hold or confirms it immediately upon UPI verification.
+                    </p>
                   </div>
+                )}
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div
-                    onClick={() => setPaymentChoice("CASH_AT_SALON")}
-                    className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                      paymentChoice === "CASH_AT_SALON"
+                    onClick={() => setPaymentChoice("SALON")}
+                    className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+                      paymentChoice === "SALON"
                         ? "border-brand-violet bg-purple-50 dark:bg-purple-950/60 shadow-sm"
                         : "border-purple-100 dark:border-purple-900 bg-white dark:bg-[#150D27]"
                     }`}
                   >
                     <Building className="h-5 w-5 text-brand-royal mb-2" />
-                    <p className="text-xs font-bold text-brand-ink dark:text-white">Pay at Salon</p>
-                    <p className="text-[10px] text-brand-muted">Cash / Card upon arrival</p>
+                    <p className="text-xs font-bold text-brand-ink dark:text-white">Pay at Salon (Default)</p>
+                    <p className="text-[11px] text-brand-muted mt-0.5">Cash / UPI / Card at salon reception upon arrival</p>
+                  </div>
+
+                  <div
+                    onClick={() => setPaymentChoice("UPI")}
+                    className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+                      paymentChoice === "UPI"
+                        ? "border-brand-violet bg-purple-50 dark:bg-purple-950/60 shadow-sm"
+                        : "border-purple-100 dark:border-purple-900 bg-white dark:bg-[#150D27]"
+                    }`}
+                  >
+                    <QrCode className="h-5 w-5 text-brand-violet mb-2" />
+                    <p className="text-xs font-bold text-brand-ink dark:text-white">Pay by UPI (Instant QR)</p>
+                    <p className="text-[11px] text-brand-muted mt-0.5">Google Pay, PhonePe, Paytm, BHIM</p>
                   </div>
                 </div>
+
+                {/* UPI Instructions and QR Box */}
+                {paymentChoice === "UPI" && (
+                  <div className="p-5 rounded-3xl bg-purple-50/60 dark:bg-purple-950/40 border-2 border-brand-violet/30 space-y-4">
+                    <div className="flex flex-col sm:flex-row items-center gap-6 justify-between">
+                      {/* QR Display */}
+                      <div className="text-center shrink-0">
+                        {upiQrDataUrl ? (
+                          <div className="bg-white p-2 rounded-2xl border border-purple-200 shadow-sm inline-block">
+                            <Image
+                              src={upiQrDataUrl}
+                              alt="Scan to pay UPI"
+                              width={180}
+                              height={180}
+                              className="rounded-xl"
+                              unoptimized
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-44 h-44 bg-purple-100 rounded-2xl flex items-center justify-center text-xs text-brand-muted">
+                            Generating QR...
+                          </div>
+                        )}
+                        <p className="text-[10px] text-brand-muted font-semibold mt-1.5">
+                          Amount: ₹{payableAmount.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+
+                      {/* Salon UPI details & mobile link */}
+                      <div className="space-y-3 flex-1 text-center sm:text-left">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-brand-muted">
+                            Official Salon UPI ID
+                          </span>
+                          <div className="flex items-center justify-center sm:justify-start gap-2 mt-1">
+                            <span className="font-mono text-sm font-bold text-brand-royal dark:text-brand-orchid bg-white dark:bg-[#150D27] px-3 py-1 rounded-xl border border-purple-200 dark:border-purple-800">
+                              {salonUpiId}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleCopyUpi}
+                              className="p-1.5 rounded-lg border border-purple-200 dark:border-purple-800 hover:bg-white text-brand-muted hover:text-brand-ink"
+                              title="Copy UPI ID"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </button>
+                            {copiedUpi && (
+                              <span className="text-[11px] text-emerald-600 font-bold">Copied!</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Mobile Deep Link */}
+                        <div>
+                          <a
+                            href={upiUrl}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-violet text-white text-xs font-bold hover:bg-brand-royal transition-all shadow-soft"
+                          >
+                            <Smartphone className="h-4 w-4" />
+                            <span>Open in UPI App (GPay / PhonePe / Paytm)</span>
+                          </a>
+                        </div>
+
+                        <p className="text-[11px] text-brand-muted leading-relaxed">
+                          Scan the QR code with any UPI app on your phone, or tap the button above if booking on mobile.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Step 2: Customer enters UTR and attaches screenshot */}
+                    <div className="pt-3 border-t border-purple-200 dark:border-purple-800 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] font-bold text-brand-ink dark:text-purple-200">
+                          12-Digit UPI Reference Number (UTR) *
+                        </label>
+                        <input
+                          type="text"
+                          maxLength={12}
+                          value={utrNumber}
+                          onChange={(e) => setUtrNumber(e.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
+                          placeholder="e.g. 432109876543 (from UPI app)"
+                          className="w-full mt-1 rounded-xl border border-purple-300 dark:border-purple-700 p-2.5 text-xs font-mono font-bold text-brand-ink dark:bg-[#150D27] dark:text-white"
+                        />
+                        <p className="text-[10px] text-brand-muted mt-1">
+                          Found in payment details of Google Pay, PhonePe, or Paytm receipt.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-brand-ink dark:text-purple-200">
+                          Payment Screenshot (Optional)
+                        </label>
+                        <div className="mt-1 flex items-center gap-2">
+                          <label className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-purple-300 dark:border-purple-700 bg-white dark:bg-[#150D27] text-xs font-semibold text-brand-muted hover:text-brand-ink cursor-pointer">
+                            <Upload className="h-4 w-4 text-brand-violet" />
+                            <span>{isUploadingScreenshot ? "Uploading..." : "Attach Proof"}</span>
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/webp"
+                              onChange={handleUploadScreenshot}
+                              className="hidden"
+                              disabled={isUploadingScreenshot}
+                            />
+                          </label>
+                          {screenshotUrl && (
+                            <span className="text-[11px] text-emerald-600 font-bold">
+                              ✓ Screenshot uploaded
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-brand-muted mt-1">
+                          PNG, JPEG, or WebP up to 5MB (stored securely locally).
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Error Banner */}

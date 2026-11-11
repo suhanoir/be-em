@@ -15,60 +15,21 @@ export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       id: "credentials",
-      name: "Credentials",
+      name: "Email and Password",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
-        phone: { label: "Phone", type: "text" },
-        otp: { label: "OTP", type: "text" },
-        isOtpLogin: { label: "isOtpLogin", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials) return null;
-
-        // 1. Phone OTP Mock Flow
-        if (credentials.isOtpLogin === "true") {
-          const { phone, otp } = credentials;
-          if (!phone) throw new Error("Phone number is required");
-          // Accept mock OTP 123456 or any 6-digit in dev
-          if (otp !== "123456") {
-            throw new Error("Invalid OTP code. Use demo code: 123456");
-          }
-
-          let user = await db.user.findFirst({
-            where: { phone },
-          });
-
-          if (!user) {
-            // Auto-register customer via phone
-            user = await db.user.create({
-              data: {
-                name: `Guest (${phone.slice(-4)})`,
-                email: `phone_${Date.now()}@beem.test`,
-                phone,
-                role: "CUSTOMER",
-              },
-            });
-          }
-
-          return {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            phone: user.phone,
-            loyaltyPoints: user.loyaltyPoints,
-          };
-        }
-
-        // 2. Email & Password Flow
-        const { email, password } = credentials;
-        if (!email || !password) {
+        if (!credentials?.email || !credentials?.password) {
           throw new Error("Email and password are required");
         }
 
+        const email = credentials.email.toLowerCase().trim();
+        const password = credentials.password;
+
         const user = await db.user.findUnique({
-          where: { email: email.toLowerCase().trim() },
+          where: { email },
         });
 
         if (!user || !user.passwordHash) {
@@ -99,14 +60,17 @@ export const authOptions: NextAuthOptions = {
         token.phone = (user as any).phone;
         token.loyaltyPoints = (user as any).loyaltyPoints || 0;
       }
+
+      // Handle session updates (e.g. name update, points update)
       if (trigger === "update" && session) {
-        if (session.loyaltyPoints !== undefined) token.loyaltyPoints = session.loyaltyPoints;
         if (session.name) token.name = session.name;
+        if (session.loyaltyPoints !== undefined) token.loyaltyPoints = session.loyaltyPoints;
       }
+
       return token;
     },
     async session({ session, token }) {
-      if (token && session.user) {
+      if (session.user) {
         (session.user as any).id = token.id as string;
         (session.user as any).role = token.role as string;
         (session.user as any).phone = token.phone as string;
@@ -115,5 +79,5 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET || "beem-beauty-empire-super-secret-key-2026-secure",
+  secret: process.env.AUTH_SECRET,
 };

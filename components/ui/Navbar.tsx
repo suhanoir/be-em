@@ -61,7 +61,7 @@ export function Navbar() {
     { href: "/gallery", label: "Gallery" },
     { href: "/stylists", label: "Stylists" },
     { href: "/quiz", label: "Style Quiz", icon: Wand2 },
-    { href: "/try-on", label: "Try-On", icon: Camera },
+    { href: "/looks", label: "Looks", icon: Sparkles },
     { href: "/offers", label: "Offers" },
     { href: "/contact", label: "Contact" },
   ];

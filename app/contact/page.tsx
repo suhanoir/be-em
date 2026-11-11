@@ -42,7 +42,15 @@ export default function ContactPage() {
                 <div>
                   <p className="font-bold text-brand-ink dark:text-white">Physical Address</p>
                   <p className="mt-0.5">Shop 12-14, Luxury Promenade, 100 Feet Road, Indiranagar, Bengaluru 560038</p>
-                  <p className="text-[11px] text-brand-violet font-semibold mt-1">Valet Parking Available</p>
+                  <a
+                    href="https://www.google.com/maps/search/?api=1&query=Shop+12-14+Luxury+Promenade+100+Feet+Road+Indiranagar+Bengaluru"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] text-brand-violet hover:underline font-semibold mt-1"
+                  >
+                    <span>Get Directions on Google Maps →</span>
+                  </a>
+                  <p className="text-[11px] text-brand-violet font-semibold mt-0.5">Valet Parking Available</p>
                 </div>
               </div>
 
@@ -105,6 +113,13 @@ export default function ContactPage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
+                <input
+                  type="text"
+                  name="hp_website"
+                  className="hidden"
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
                 <h2 className="font-heading text-2xl font-bold text-brand-ink dark:text-white mb-2">
                   Send an Inquiry
                 </h2>
@@ -167,6 +182,38 @@ export default function ContactPage() {
                 </button>
               </form>
             )}
+          </div>
+        </div>
+
+        {/* Key-free OpenStreetMap Interactive View */}
+        <div className="rounded-3xl bg-white dark:bg-[#1A102F] p-6 border border-purple-100 dark:border-purple-900 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="font-heading text-xl font-bold text-brand-ink dark:text-white">
+                Find Our Sanctuary
+              </h3>
+              <p className="text-xs text-brand-muted">
+                100 Feet Road, Indiranagar, Bengaluru • Open 7 Days 09:00 AM – 08:00 PM
+              </p>
+            </div>
+            <a
+              href="https://www.google.com/maps/search/?api=1&query=Shop+12-14+Luxury+Promenade+100+Feet+Road+Indiranagar+Bengaluru"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-bold text-brand-violet hover:underline flex items-center gap-1"
+            >
+              <span>Open in Google Maps →</span>
+            </a>
+          </div>
+
+          <div className="w-full h-72 rounded-2xl overflow-hidden border border-purple-200 dark:border-purple-800">
+            <iframe
+              title="BEEM Salon Location"
+              width="100%"
+              height="100%"
+              src="https://www.openstreetmap.org/export/embed.html?bbox=77.635%2C12.965%2C77.655%2C12.985&amp;layer=mapnik&amp;marker=12.975%2C77.645"
+              className="w-full h-full filter saturate-150 contrast-105"
+            />
           </div>
         </div>
       </div>

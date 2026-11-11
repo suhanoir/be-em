@@ -2,9 +2,19 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { registerSchema } from "@/lib/validators";
+import { checkRateLimit, getClientIp, validateAntiBot } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
+    const ip = getClientIp(req);
+    const rateCheck = await checkRateLimit(`ip:${ip}:register`, 5, 300);
+    if (!rateCheck.success) {
+      return NextResponse.json(
+        { error: "Too many registration attempts. Please wait." },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const result = registerSchema.safeParse(body);
 
@@ -15,7 +25,13 @@ export async function POST(req: Request) {
       );
     }
 
-    const { name, email, phone, password, referralCode } = result.data;
+    const { name, email, phone, password, referralCode, hp_website, formTimestamp } = result.data;
+
+    const botCheck = validateAntiBot({ hp_website, formTimestamp, minDurationSeconds: 1.5 });
+    if (botCheck.isBot) {
+      return NextResponse.json({ error: "Registration security check failed." }, { status: 400 });
+    }
+
     const cleanEmail = email.toLowerCase().trim();
 
     // Check existing email
@@ -103,21 +119,24 @@ export async function POST(req: Request) {
         data: {
           userId: referrerId,
           points: 200,
-          type: "REFERRAL",
-          description: `Referral Reward for inviting ${user.name}`,
-          balanceAfter: 0, // will reflect in total
+          type: "BONUS",
+          description: `Referral Reward for welcoming ${name}`,
+          balanceAfter: 200,
         },
       });
     }
 
     return NextResponse.json(
-      { message: "Account created successfully", user },
+      {
+        message: "Account created successfully",
+        user,
+      },
       { status: 201 }
     );
   } catch (error: any) {
     console.error("Registration error:", error);
     return NextResponse.json(
-      { error: "Internal server error during registration", message: error.message },
+      { error: "Failed to create account", message: error.message },
       { status: 500 }
     );
   }

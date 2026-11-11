@@ -9,7 +9,7 @@ export default async function AdminServicesPage() {
   });
 
   const categories = await db.serviceCategory.findMany({
-    orderBy: { orderIndex: "asc" },
+    orderBy: { sortOrder: "asc" },
   });
 
   return (

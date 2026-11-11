@@ -96,17 +96,15 @@ export default async function ServiceDetailPage({ params }: Props) {
                 </p>
               </div>
 
-              {service.prepInstructions && (
-                <div className="p-5 rounded-2xl bg-purple-50 dark:bg-purple-950/50 border border-purple-100 dark:border-purple-900">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-brand-deep dark:text-brand-orchid mb-2 flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Preparation & Care Instructions
-                  </h3>
-                  <p className="text-xs text-brand-muted leading-relaxed">
-                    {service.prepInstructions}
-                  </p>
-                </div>
-              )}
+              <div className="p-5 rounded-2xl bg-purple-50 dark:bg-purple-950/50 border border-purple-100 dark:border-purple-900">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-brand-deep dark:text-brand-orchid mb-2 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Preparation &amp; Salon Notes
+                </h3>
+                <p className="text-xs text-brand-muted leading-relaxed">
+                  Complimentary artisan tea and consultation included. Please arrive 10 minutes prior to your reserved slot.
+                </p>
+              </div>
 
               {/* Verified Reviews Section */}
               <div className="pt-6 border-t border-purple-100 dark:border-purple-900/60">
@@ -167,13 +165,8 @@ export default async function ServiceDetailPage({ params }: Props) {
                 <div>
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-bold text-brand-deep dark:text-brand-orchid">
-                      ₹{(service.discountedPrice || service.price).toLocaleString("en-IN")}
+                      ₹{service.price.toLocaleString("en-IN")}
                     </span>
-                    {service.discountedPrice && (
-                      <span className="text-sm text-brand-muted line-through">
-                        ₹{service.price.toLocaleString("en-IN")}
-                      </span>
-                    )}
                   </div>
                   <span className="text-[11px] text-brand-muted">All inclusive (Taxes included)</span>
                 </div>
@@ -232,7 +225,7 @@ export default async function ServiceDetailPage({ params }: Props) {
                         <p className="text-[11px] text-brand-muted">{rs.durationMinutes} mins</p>
                       </div>
                       <span className="text-xs font-bold text-brand-deep dark:text-brand-orchid">
-                        ₹{(rs.discountedPrice || rs.price).toLocaleString("en-IN")}
+                        ₹{rs.price.toLocaleString("en-IN")}
                       </span>
                     </Link>
                   ))}
