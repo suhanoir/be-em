@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #FFFFFF;
+    --foreground: #1F1630;
+    --card: #FFFFFF;
+    --card-foreground: #1F1630;
+    --popover: #FFFFFF;
+    --popover-foreground: #1F1630;
+    --primary: #6D28D9;
+    --primary-foreground: #FFFFFF;
+    --secondary: #EDE9FE;
+    --secondary-foreground: #4C1D95;
+    --muted: #F5F3FF;
+    --muted-foreground: #6B5B7B;
+    --accent: #FCE7F3;
+    --accent-foreground: #B76E79;
+    --border: #E9D5FF;
+    --input: #E9D5FF;
+    --ring: #7C3AED;
+    --radius: 1rem;
+  }
+
+  .dark {
+    --background: #0F081D;
+    --foreground: #F5F3FF;
+    --card: #1A102F;
+    --card-foreground: #F5F3FF;
+    --popover: #1A102F;
+    --popover-foreground: #F5F3FF;
+    --primary: #A78BFA;
+    --primary-foreground: #0F081D;
+    --secondary: #2E1065;
+    --secondary-foreground: #EDE9FE;
+    --muted: #1E1B4B;
+    --muted-foreground: #C4B5FD;
+    --accent: #4A1D34;
+    --accent-foreground: #FBCFE8;
+    --border: #3B0764;
+    --input: #3B0764;
+    --ring: #A78BFA;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-inter), sans-serif;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, .font-heading {
+  font-family: var(--font-cormorant), Georgia, serif;
+}
+
+.font-script {
+  font-family: var(--font-great-vibes), cursive;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F5F3FF;
+}
+::-webkit-scrollbar-thumb {
+  background: #C4B5FD;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #7C3AED;
+}
+
+/* Print styling for Invoices */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-invoice, #printable-invoice * {
+    visibility: visible;
+  }
+  #printable-invoice {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 20px;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4C1D95"/>
+      <stop offset="50%" stop-color="#6D28D9"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE68A"/>
+      <stop offset="50%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#B76E79"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#purpleGrad)"/>
+  <circle cx="256" cy="256" r="220" fill="none" stroke="url(#goldGrad)" stroke-width="4" stroke-dasharray="12,8" opacity="0.6"/>
+  <!-- Crown / Floral Emblem -->
+  <path d="M190 200 L256 140 L322 200 L300 240 L212 240 Z" fill="url(#goldGrad)" />
+  <circle cx="190" cy="195" r="10" fill="#FDE68A"/>
+  <circle cx="256" cy="135" r="14" fill="#FDE68A"/>
+  <circle cx="322" cy="195" r="10" fill="#FDE68A"/>
+  <!-- Text BEEM -->
+  <text x="256" y="340" font-family="'Great Vibes', 'Playfair Display', serif" font-size="108" font-weight="bold" fill="url(#goldGrad)" text-anchor="middle" letter-spacing="4">BEEM</text>
+  <text x="256" y="385" font-family="'Inter', sans-serif" font-size="22" font-weight="600" fill="#EDE9FE" text-anchor="middle" letter-spacing="8">BEAUTY EMPIRE</text>
+</svg>

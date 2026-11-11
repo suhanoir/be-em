@@ -1,0 +1,18 @@
+{
+  "name": "BEEM (Beauty Empire)",
+  "short_name": "BEEM",
+  "description": "Luxury Beauty Parlor, Bridal Makeover & Mehendi Artistry",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#4C1D95",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
