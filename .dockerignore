@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.env
+.env*.local
+*.db
+*.db-journal
+*.sqlite
+*.tsbuildinfo
+Dockerfile
+.dockerignore
+README.md
+tests
+scripts

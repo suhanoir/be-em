@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
@@ -19,6 +19,7 @@ import {
   Camera,
   LogOut,
   ChevronDown,
+  Phone,
 } from "lucide-react";
 import { useTheme } from "@/components/providers/Providers";
 
@@ -28,6 +29,27 @@ export function Navbar() {
   const { isDark, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Close mobile menu on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMobileMenuOpen(false);
+        setUserDropdownOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const isAdmin = (session?.user as any)?.role === "ADMIN";
   const loyaltyPoints = (session?.user as any)?.loyaltyPoints || 0;
@@ -41,13 +63,28 @@ export function Navbar() {
     { href: "/quiz", label: "Style Quiz", icon: Wand2 },
     { href: "/try-on", label: "Try-On", icon: Camera },
     { href: "/offers", label: "Offers" },
-    { href: "/lookboard", label: "Look Board" },
+    { href: "/contact", label: "Contact" },
   ];
 
   const closeMenu = () => setMobileMenuOpen(false);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-purple-100/60 bg-white/90 backdrop-blur-md dark:border-purple-900/40 dark:bg-[#0F081D]/90 transition-colors">
+    <>
+      {/* Skip to Content for Accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-brand-royal focus:text-white focus:rounded-xl focus:shadow-glow focus:outline-none"
+      >
+        Skip to main content
+      </a>
+
+      <header
+        className={`sticky top-0 z-40 w-full transition-all duration-300 border-b ${
+          scrolled
+            ? "border-purple-200/50 bg-white/80 backdrop-blur-xl shadow-soft dark:border-purple-900/50 dark:bg-[#0F081D]/85"
+            : "border-purple-100/60 bg-white/95 backdrop-blur-md dark:border-purple-900/40 dark:bg-[#0F081D]/90"
+        }`}
+      >
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2 group" onClick={closeMenu}>
@@ -247,6 +284,7 @@ export function Navbar() {
           </nav>
         </div>
       )}
-    </header>
+      </header>
+    </>
   );
 }
