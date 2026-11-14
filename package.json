@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node -e \"try{require('fs').rmSync('.next/static',{recursive:true,force:true})}catch(e){}\" && next build",
+    "build": "prisma generate && next build",
+    "postinstall": "prisma generate",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "seed": "tsx prisma/seed.ts",
+    "seed": "node scripts/seed-neon.mjs",
     "setup:env": "node scripts/setup-env.mjs",
     "audit:network": "node scripts/test-network-audit.mjs"
   },
